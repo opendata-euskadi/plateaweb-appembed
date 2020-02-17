@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="300 seconds">
+
+	<property name="appName" value="r01p" />
+	
+	<jmxConfigurator contextName="r01p" />
+
+	<include resource="r01p/r01pEnvironment.xml"/>
+
+	<!-- Global -->
+	<include resource="r01fb/r01fbLogbackGlobal.xml"/>
+	<include resource="r01fb/r01fbLogback.xml"/>
+
+	<!-- Specific -->
+	<include resource="r01p/r01pLogback.xml"/>
+
+</configuration>

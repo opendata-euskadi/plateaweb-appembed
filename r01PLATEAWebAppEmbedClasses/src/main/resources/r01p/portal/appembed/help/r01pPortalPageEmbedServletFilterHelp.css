@@ -1,0 +1,40 @@
+body {
+	margin-top: 20px;
+	width: 100%;
+}
+div.tab-pane {
+	padding: 10px;
+    box-shadow: 0 0 4px rgba(0,0,0,.4);
+    border-radius: 0;
+}
+section#sectionAllProxyDefs {
+	margin-top: 20px;
+}
+div#checkNOK, 
+div#checkOK {
+	margin-left: 20px;
+}
+form#frmCheckProxiedUrl {
+	margin-left: 20px;
+}
+form#frmCheckProxiedUrl input#url {
+	width: 40em;
+}
+form#frmRefreshMetrics input#r01pCompactMetricsReport,
+form#frmRefreshReqLog input#r01pClearReqLog {
+	margin-left: 20px;
+}
+button#btnRefreshMetrics,
+button#btnRefreshReqLog {
+	margin-bottom:20px;
+}
+.dl-horizontal {
+	margin-bottom: 0px;
+}
+.dl-horizontal dt {
+	width:50px;
+	text-align:left;
+}
+.dl-horizontal dd {
+	margin-left:60px;
+}

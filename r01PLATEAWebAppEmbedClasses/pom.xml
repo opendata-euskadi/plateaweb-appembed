@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+		xmlns="http://maven.apache.org/POM/4.0.0"
+			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	
+<!-- ====================================================================== -->
+<!-- PARENT                                                                 -->
+<!-- ====================================================================== -->
+	<parent>
+		<groupId>r01.plateaweb.portal.appembed</groupId>
+		<artifactId>r01PLATEAWebAppEmbed</artifactId>
+		<version>${revision}</version>
+	</parent>
+	
+<!-- ====================================================================== -->
+<!-- ARTIFACT                                                               -->
+<!-- ====================================================================== -->
+	<name>r01PLATEAWebAppEmbedClasses</name>
+	<artifactId>r01PLATEAWebAppEmbedClasses</artifactId>
+	
+<!-- ====================================================================== -->
+<!-- DEPENDENCIES                                                           -->
+<!-- ====================================================================== -->
+	<dependencies>
+		<!-- ///////////////////////////////////////// -->
+		<!-- R01HP: PageLoader                         -->
+		<!-- ///////////////////////////////////////// -->
+		<dependency>
+			<groupId>r01.plateaweb.portal.appembed</groupId>
+			<artifactId>r01PLATEAWebAppEmbedPortalPageLoaderClasses</artifactId>
+			<version>${revision}</version>
+		</dependency>
+		
+		<!-- ///////////////////////////////////////// -->
+		<!-- R01HP: Metrics                            -->
+		<!-- ///////////////////////////////////////// -->
+		<dependency>
+			<groupId>r01.plateaweb.portal.appembed</groupId>
+			<artifactId>r01PLATEAWebAppEmbedMetricsClasses</artifactId>
+			<version>${revision}</version>
+		</dependency>
+		
+		<!-- ///////////////////////////////////////// -->
+		<!-- R01F: HTML                                -->
+		<!-- ///////////////////////////////////////// -->
+		<dependency>
+			<groupId>r01.r01f.html</groupId>
+			<artifactId>r01fHTMLParserClasses</artifactId>
+			<version>${r01f.version}</version>
+		</dependency>
+		
+		<!-- ///////////////////////////////////////// -->
+		<!-- R01F: Web                                 -->
+		<!-- ///////////////////////////////////////// -->
+		<dependency>
+			<groupId>r01.r01f.web</groupId>
+			<artifactId>r01fWebProfileClasses</artifactId>
+			<version>${r01f.version}</version>
+		</dependency>
+		
+		<!-- ///////////////////////////////////////// -->
+		<!-- UserAgent detector                        -->
+		<!-- ///////////////////////////////////////// -->
+		<dependency>
+		    <groupId>net.sf.uadetector</groupId>
+		    <artifactId>uadetector-core</artifactId>
+		    <version>0.9.22</version>
+		</dependency>
+		<dependency>
+		    <groupId>net.sf.uadetector</groupId>
+		    <artifactId>uadetector-resources</artifactId>
+		    <version>2014.10</version>
+		</dependency>
+	</dependencies>
+	
+<!-- ====================================================================== -->
+<!-- BUILD                                                                  -->
+<!-- ====================================================================== -->
+	<build>
+		<pluginManagement>
+			<plugins>
+				<!--
+				ECLIPSE (see main pom.xml for further info) ===================
+				This plugin has NO effects in maven build:
+					m2e ONLY runs some 'standard' goals of the maven pom.xml since the aim of m2e is NOT to be a complete CI tool
+					... in order to include 'non-standard' goals in m2e execution and avoid [plugin execution not covered by the eclipse m2e plugin project build lifecycle mapping]
+						the 'non-standard' plugin MUST be explicitly included in m2e execution
+				-->
+				<plugin>
+				  	<groupId>org.eclipse.m2e</groupId>
+				  	<artifactId>lifecycle-mapping</artifactId>
+				  	<version>1.0.0</version>
+				  	<configuration> 
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<!-- flatten plugin -->
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>flatten-maven-plugin</artifactId>
+										<versionRange>[1.1.0,)</versionRange>
+										<goals>
+											<goal>flatten</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+</project>

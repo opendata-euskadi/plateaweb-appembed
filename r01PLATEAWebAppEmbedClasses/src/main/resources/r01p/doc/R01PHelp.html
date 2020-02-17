@@ -1,0 +1,987 @@
+
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>R01P AppEmbed Filter</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Content</p>
+<p><a href="#_Toc513457670">1 R01P: What is Portal Application embedding 2</a></p>
+<p><a href="#_Toc513457671">2 Inside view: how does it work 4</a></p>
+<p><a href="#_Toc513457672">2.1 Running R01P as a Java Web App servlet filter 4</a></p>
+<p><a href="#_Toc513457673">2.2 Running R01P as a stand-alone reverse proxy 6</a></p>
+<p><a href="#_Toc513457674">3 System operation 8</a></p>
+<p><a href="#_Toc513457675">3.1 Running R01P as a Java Web App servlet filter 8</a></p>
+<p><a href="#_Toc513457676">3.1.1. Config 8</a></p>
+<p><a href="#_Toc513457677">3.2 Running R01P as a stand-alone reverse proxy 11</a></p>
+<p><a href="#_Toc513457678">3.2.1. Config 11</a></p>
+<p><a href="#_Toc513457679">3.2.2. A note for configuring applications running in IIS 13</a></p>
+<p><a href="#_Toc513457680">3.2.3. Testing the configuration 14</a></p>
+<p><a href="#_Toc513457681">3.3 Metrics 15</a></p>
+<p><a href="#_Toc513457682">4 Developer useful info 16</a></p>
+<p><a href="#_Toc513457683">4.1.1. General rules 16</a></p>
+<p><a href="#_Toc513457684">4.1.2. [R01P] Filter 18</a></p>
+<p><a href="#_Toc513457685">4.1.3. Setting a non en-bedding behavior 18</a></p>
+<p><a href="#_Toc513457686">4.1.4. Legacy [R01P] 19</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>1 R01P: What is Portal Application embedding</p>
+<p>Using [Portal Application Embedding], any [application] &ndash;<em>no matter which technology is it base on</em>- can be shown inside a [portal page] made using [PLATEA Portal Manager]:</p>
+<p>The [application] can be <em>embedded</em> (shown) in any [portal page]: the [portal page] will decorate the embedded [application] with the site elements such as menus, banners, footers, etc.</p>
+<p>As such, an [application] {app1} can be displayed in the portal {portalX} at the page {pageX1}:</p>
+<p>http://site/{portal<strong>X</strong>}-{page<strong>X</strong>1}/{lang}/{app<strong>1</strong>}</p>
+<p>&hellip; if required, the same application can also be accesed within another portal {portalY} and page {pageY1} (<em>that surely will have a different visual structure and [Visual Areas] disposition</em>):</p>
+<p>http://site/{portal<strong>Y</strong>}-{page<strong>Y</strong>1}/{lang}/{app<strong>1</strong>}</p>
+<p>&hellip; in the same way, the same [container portal pages] can hold another [application] {app2}:</p>
+<p>http://site/{portal<strong>X</strong>}-{page<strong>X</strong>1}/{lang}/{app<strong>2</strong>}</p>
+<p>http://site/{portal<strong>Y</strong>}-{page<strong>Y</strong>1}/{lang}/{app<strong>2</strong>}</p>
+<p>Think of it as a kind of &ldquo;<em>IFRAME&rdquo;</em> inside the [portal page] that can <em>embed</em> (show) any [application] (<em>or any url in general if it can be reached from the portal app server where [R01P] resides</em>)</p>
+<p>It&rsquo;s a &ldquo;kind-of&rdquo; IFRAME <strong>but it&rsquo;s NOT an IFRAME</strong> (<em>IFRAME use is discouraged from the accessibility point of view</em>): from the web browser point of view the [portal page] with the embedded [application] is seen as a single whole web page but down the stream there are two <strong>independent</strong> components:</p>
+<ul>
+<li>The [portal page] that contains (<em>embeds</em>) the application: the [container page]</li>
+<li>The [application] itself</li>
+</ul>
+<p>Simple enough! But things are not so easy: the <strong>returned assembled HTML must be well formed</strong> and this is where things turn tricky:</p>
+<ul>
+<li>The [portal container page] is a well-formed HTML page with it&rsquo;s &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</li>
+</ul>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;html&gt;</p>
+<p>&lt;head&gt;{portal page head section}&lt;/head&gt;</p>
+<p>&lt;body&gt;</p>
+<p>&lt;div id=&rsquo;container&rsquo;&gt;</p>
+<p>{___this is where the app HTML will be embedded___}</p>
+<p>&lt;/div&gt;</p>
+<p>&lt;/body&gt;</p>
+<p>&lt;/html&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The [application] usually is also a well-formed HTML page, also with it&rsquo;s &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</li>
+</ul>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;html&gt;</p>
+<p>&lt;head&gt;{app head section}&lt;/head&gt;</p>
+<p>&lt;body&gt;</p>
+<p>{APP HTML BODY MARKUP}</p>
+<p>&lt;/body&gt;</p>
+<p>&lt;/html&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>when embedding the app, the HTML markup of [portal page] and HTML markup of the [app] <strong>must be mixed</strong> to create a well-formed HTML markup.</p>
+<p>If nothing is done when wrapping the [application] HTML with it&rsquo;s &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections inside a [container portal page] with it&rsquo;s own &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections, <strong>the resulting HTML wont be well formed</strong>:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;html&gt;</p>
+<p>&lt;head&gt;</p>
+<p>{portal page head section}</p>
+<p>&lt;/head&gt;</p>
+<p>&lt;body&gt;</p>
+<p>&lt;div id=&rsquo;container&rsquo;&gt;</p>
+<p>&lt;html&gt;</p>
+<p>&lt;head&gt;{app head section}&lt;/head&gt;</p>
+<p>&lt;body&gt;</p>
+<p>{APP HTML BODY MARKUP}</p>
+<p>&lt;/body&gt;</p>
+<p>&lt;/html&gt;</p>
+<p>&lt;/div&gt;</p>
+<p>&lt;/body&gt;</p>
+<p>&lt;/html&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>&hellip; so while embedding the [application] HTML into the [container portal page], the [application] HTML must be parsed to dissasemble the &lt;html&gt;, &lt;head&gt; and &lt;body&gt; and embed each section in the corresponding section of the [container portal page]:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;html&gt;</p>
+<p>&lt;head&gt;</p>
+<p>{app head section}</p>
+<p>{portal page head section}</p>
+<p>&lt;/head&gt;</p>
+<p>&lt;body&gt;</p>
+<p>&lt;div id=&rsquo;container&rsquo;&gt;</p>
+<p>{APP HTML BODY MARKUP}</p>
+<p>&lt;/div&gt;</p>
+<p>&lt;/body&gt;</p>
+<p>&lt;/html&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong><u>COMPATIBILITY NOTE:</u></strong></p>
+<p>The previous versi&oacute;n of [R01P] was NOT capable of &ldquo;reorder&rdquo; the [application]&rsquo;s HTML &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections so <strong>the [application] must return HTML content <u>without</u></strong><strong>&lt;html&gt;</strong><strong>, </strong><strong>&lt;head&gt;</strong><strong> and </strong><strong>&lt;body&gt; </strong><strong>sections: it must return just the [application] HTML wrapped within two </strong>&lt;div&gt;<strong> tags.</strong></p>
+<p>&nbsp;In order to set the &lt;head&gt; content, a complicated, error-prone and un-maintainable apache config must be done.</p>
+<p>&hellip; <strong>this is no longer true</strong>: the new [R01P] does NOT imposes any restriction to the [application] HTML so it can be an arbitrary HTML.</p>
+<p>2 Inside view: how does it work</p>
+<p>Technically [R01P] can be run in two very diferent ways:</p>
+<table>
+<tbody>
+<tr>
+<td>
+</td>
+<td>
+<p>How it&rsquo;s deployed</p>
+</td>
+<td>
+<p>When to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>As an stand-alone [reverse proxy]</p>
+</td>
+<td>
+<p>An stand-alone reverse proxy is deployed independently of the target web app</p>
+<p>The reverse proxy can be run in a dedicated java web app server or if the target app also runs inside a java app server, it can be deployed as an independent WAR inside the same app server as the target app</p>
+</td>
+<td>
+<p>Apps in any technology (<em>java web app, .NET, PHP, etc</em>)</p>
+<p>Java Web Apps that cannot be modified to add a servlet filter</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>A a Java Web App [servlet filter]</p>
+</td>
+<td>
+<p>As a [servlet-filter] for the java web app</p>
+</td>
+<td>
+<p>Java Web Apps that can be modified to include a servlet filter (<em>by modifying the web.xml file</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>2.1 Running R01P as a Java Web App servlet filter</p>
+<p>[R01P] is deployed as a [servlet filter] that:</p>
+<ol>
+<li>Loads the [portal container page] that has a designated area (<em>a [Visual Area]</em>) to hold any [content] or [applications] (<em>[Container Visual Area]</em>)</li>
+<li>Lets the filter run the [app] code and generate the html content</li>
+<li>Joins / assembles / embed the [application] html content inside the [Visual Area] designated to hold [content] or [applications]</li>
+</ol>
+<p>As seen below the flow is:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>1. The [web server] (<em>apache</em>) detects the URL as a [portal page] embeded application if it matches a pattern like:</p>
+<p>http://site/{portal}-{page}/{lang}/{appURL}</p>
+<p>2. The [request] is routed through a proxy to the [target application server] where the target [java web app] resides</p>
+<p>3. [R01P] filter, using the {portal} and {page} info, [R01P] loads a copy of the [container portal page] and parses it to get the &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>[R01P] filter just let the filter target servlet run and gets the generated HTML, parses it to get the &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>4. The whole HTML to be returned is assembled merging the [container portal page]&rsquo;s and [application]&rsquo;s &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>5. The [web server] (<em>apache</em>) solves other static [Visual Areas] and returns the complete HTML</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A more detailed view where the different urls and request parameters can be seen here:</p>
+<p>2.2 Running R01P as a stand-alone reverse proxy</p>
+<p>[R01P] is deployed at a [portal application server] and acts as a <strong>reverse proxy</strong> that:</p>
+<ol>
+<li>Loads the [portal container page] that has a designated area (<em>a [Visual Area]</em>) to hold any [content] or [applications] (<em>[Container Visual Area]</em>)</li>
+<li>Uses a reverse proxy to reach the [application server] where the [application] resides and loads it&rsquo;s html content</li>
+<li>Joins / assembles / embed the [application] html content inside the [Visual Area] designated to hold [content] or [applications]</li>
+</ol>
+<p>As seen below the flow is:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>1. The [web server] (<em>apache</em>) detects the URL as a [portal page] embeded application if it matches a pattern like:</p>
+<p>http://site/{portal}-{page}/{lang}/{appURL}</p>
+<p>2. The [request] is routed through a proxy to the [portal application server] where [R01P] resides</p>
+<p>A [web server] (<em>apache</em>) rewrite map is used to know what [portal application server (R01P)] will handle the [application] integration.</p>
+<p>The map is something like:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>App1</p>
+</td>
+<td>
+<p>Portal app server A</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>App2</p>
+</td>
+<td>
+<p>Portal app server B</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>App 3</p>
+</td>
+<td>
+<p>Portal app server C</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>App 4</p>
+</td>
+<td>
+<p>Portal app server A</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>3. At the [portal app server], using the {portal} and {page} info, [R01P] loads a copy of the [container portal page] and parses it to get the &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>4. Using another proxy to the [application server] where the [application] resides, [R01P] retrieves the [application HTML] and parses it to get the &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>The [portal app server] has a proxy configuration for every target [app server]</p>
+<p>5. The whole HTML to be returned is assembled merging the [container portal page]&rsquo;s and [application]&rsquo;s &lt;html&gt;, &lt;head&gt; and &lt;body&gt; sections</p>
+<p>6. The [web server] (<em>apache</em>) solves other static [Visual Areas] and returns the complete HTML</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A more detailed view where the different urls and request parameters can be seen here:</p>
+<p>As seen, there&rsquo;re two proxies in place that offers a lot of elasticity to the system:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>A proxy from the [web server] to the [portal application server]</p>
+</td>
+<td>
+<p>There can be as many [portal applicaton servers] (<em>that holds [R01P]</em>) as needed</p>
+<p>Usually just two nodes for [portal application server] is more than enought</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>A proxy from the [portal application server] to the targer [application server]</p>
+</td>
+<td>
+<p>[R01P] has a kind of &ldquo;pipes&rdquo; (<em>proxies</em>) to target [application servers] where many [applications] can reside so there&rsquo;s no need to configure a &ldquo;pipe&rdquo; (<em>a proxy</em>) for every target [application]: usually the proxy is configured for the target [application server] as a whole.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This two-layer of proxies provides with a lot of flexibility; two of the most common configuration examples could be:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Segmentation using a <strong>single [portal application server]</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Segmentation using <strong>multiple [portal application server]</strong>s to multiple target [application server]s</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>3 System operation</p>
+<p>3.1 Running R01P as a Java Web App servlet filter</p>
+<ul>
+<li> Config</li>
+</ul>
+<p>The use of [R01P app embed servlet filter] in a java web app cannot be easer, just <strong>setup the filter in the web.xml config file:</strong></p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;?xml version=<em>"1.0"</em> encoding=<em>"UTF-8"</em>?&gt;</p>
+<p>&lt;web-app xmlns:xsi=<em>"http://www.w3.org/2001/XMLSchema-instance"</em></p>
+<p> xmlns=<em>"http://java.sun.com/xml/ns/javaee"</em></p>
+<p> xsi:schemaLocation=<em>"http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"</em><br/> id=<em>"WebApp_ID"</em> version=<em>"2.5"</em>&gt;</p>
+<p> &lt;display-name&gt;r01pTestWar&lt;/display-name&gt;</p>
+<p> &lt;welcome-file-list&gt;</p>
+<p> &lt;welcome-file&gt;index.jsp&lt;/welcome-file&gt;</p>
+<p> &lt;/welcome-file-list&gt;</p>
+<p> </p>
+<p> &lt;!--</p>
+<p> R01P in FILTER MODE (does NOT uses a <u>proxy</u>)</p>
+<p> --&gt;</p>
+<p> &lt;filter&gt;</p>
+<p> &lt;filter-name&gt;portalPageAppEmbedServletFilter&lt;/filter-name&gt;</p>
+<p> &lt;filter-class&gt;r01p.portal.appembed.R01PortalPageAppEmbedServletFilter&lt;/filter-class&gt;</p>
+<p> &lt;/filter&gt;</p>
+<p> &lt;filter-mapping&gt;</p>
+<p> &lt;filter-name&gt;portalPageAppEmbedServletFilter&lt;/filter-name&gt;</p>
+<p> &lt;url-pattern&gt;/*&lt;/url-pattern&gt;</p>
+<p> &lt;/filter-mapping&gt;</p>
+<p> &lt;servlet&gt;</p>
+<p> &lt;description&gt;&lt;/description&gt;</p>
+<p> &lt;display-name&gt;my servlet&lt;/display-name&gt;</p>
+<p> &lt;servlet-name&gt;MyServelt&lt;/servlet-name&gt;</p>
+<p> &lt;servlet-class&gt;com.company.MyServlet&lt;/servlet-class&gt;</p>
+<p> &lt;/servlet&gt;</p>
+<p> &lt;servlet-mapping&gt;</p>
+<p> &lt;servlet-name&gt;MyServlet&lt;/servlet-name&gt;</p>
+<p> &lt;url-pattern&gt;/MyServlet/*&lt;/url-pattern&gt;</p>
+<p> &lt;/servlet-mapping&gt;</p>
+<p>&lt;/web-app&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>By default [R01P app embed filter] tries to use the config at /config/r01p/r01p.appembed.properties.xml</p>
+<p>&hellip; BUT the config can be overridden at the web.xml file using the servlet filter&rsquo;s init params</p>
+<p>The r01p.appembed.properties.xml file has the following properties:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>&lt;?xml version=<em>"1.0"</em> encoding=<em>"UTF-8"</em>?&gt;</p>
+<p>&lt;portalpageappembedfilter environment =<em>"local"</em>&gt;</p>
+<p> &lt;!-- Resources NOT embedded into a portal page ============================================ --&gt;</p>
+<p> &lt;!-- A list of regular expressions that will be matched <u>agains</u> the URL path of the resource --&gt;</p>
+<p> &lt;notEmbeddedResources&gt;</p>
+<p> &lt;!--</p>
+<p> &lt;urlPathRegExp&gt;/not-<u>embeded</u>/.*&lt;/urlPathRegExp&gt;</p>
+<p> --&gt;</p>
+<p> &lt;/notEmbeddedResources&gt;</p>
+<p> &lt;!-- Portal server configuration ==================================================== --&gt;</p>
+<p> &lt;!-- Defines the location (<u>filesystem</u> path) of the container pages where --&gt;</p>
+<p> &lt;!-- the <u>app</u> will be embedded, the default page to use and how these pages are cached --&gt;</p>
+<p> &lt;!-- Multiple environments can be configured in the same file --&gt;</p>
+<p> &lt;portalServer&gt;</p>
+<p> &lt;cacheConfig&gt;</p>
+<p> &lt;initialCapacity&gt;10&lt;/initialCapacity&gt;</p>
+<p> &lt;maxSize&gt;100&lt;/maxSize&gt;</p>
+<p> &lt;checkInterval&gt;20s&lt;/checkInterval&gt;</p>
+<p> &lt;/cacheConfig&gt;</p>
+<p> &lt;portalFiles&gt;</p>
+<p> &lt;!-- the <u>filesystem</u> path where the container pages can be found --&gt;</p>
+<p> &lt;root&gt;d:/develop/temp_dev/r01p/&lt;/root&gt;</p>
+<p> &lt;pages&gt;/<u>html</u>/pages/portal&lt;/pages&gt;</p>
+<p> &lt;!-- the default portal/page/<u>lang</u> to be used if none can be guess from the request --&gt;</p>
+<p> &lt;defaultPortal&gt;web01&lt;/defaultPortal&gt;</p>
+<p> &lt;defaultPage&gt;<u>eduki</u>&lt;/defaultPage&gt;</p>
+<p> &lt;defaultLang&gt;<u>es</u>&lt;/defaultLang&gt;</p>
+<p> &lt;/portalFiles&gt;</p>
+<p> &lt;portalCookieName&gt;r01pPortalCookie&lt;/portalCookieName&gt;</p>
+<p> &lt;/portalServer&gt;</p>
+<p> &lt;!-- Metrics see http://metrics.dropwizard.io/3.1.0/ ============================= --&gt;</p>
+<p> &lt;metrics enabled=<em>'true'</em>&gt;</p>
+<p> &lt;consoleReporter enabled=<em>'false'</em> reportEvery=<em>"30s"</em> /&gt;</p>
+<p> &lt;slf4jReporter enabled=<em>'true'</em> reportEvery=<em>"30s"</em>/&gt;</p>
+<p> &lt;!-- visualVM can be used to inspect metrics: --&gt;</p>
+<p> &lt;!-- 1.- Install visualVM MBeans <u>plugin</u>: tools &gt; <u>plugins</u> &gt; Available <u>plugins</u> &gt; [VisualVM MBeans] --&gt;</p>
+<p> &lt;!-- 2.- Select [<u>Tomcat</u>] (or whatever) and go to the [MBeans] tab --&gt;</p>
+<p> &lt;!-- 3.- Using the tree go to [Metrics] --&gt;</p>
+<p> &lt;!-- 4.- double-clicking at any metric value a graph can be seen --&gt;</p>
+<p> &lt;jmxReporter enabled=<em>'false'</em>/&gt;</p>
+<p> &lt;!-- if metrics <u>restservices</u> are enabled some info is available through an <u>admin</u><u>servlet</u> (restServices) --&gt;</p>
+<p> &lt;!-- METRICS: http://localhost:8080/r01pProxyWar/r01pMetricsRestServicesServlet/metrics --&gt;</p>
+<p> &lt;!-- HEALTH-CHECK: http://localhost:8080/r01pProxyWar/r01pMetricsRestServicesServlet/healthcheck --&gt;</p>
+<p> &lt;!-- THREADS: http://localhost:8080/r01pProxyWar/r01pMetricsRestServicesServlet/threads --&gt;</p>
+<p> &lt;!-- PING: http://localhost:8080/r01pProxyWar/r01pMetricsRestServicesServlet/ping --&gt;</p>
+<p> &lt;restServices&gt;true&lt;/restServices&gt;</p>
+<p> &lt;/metrics&gt;</p>
+<p>&lt;/portalpageappembedfilter&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The file contains the following sections:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Not embedded resources</p>
+</td>
+<td>
+<p>A list of regular expressions that will be matched against the requested url to see if the response should be embedded into a portal page:</p>
+<p>&lt;!-- Resources NOT embedded into a portal page ============================================ --&gt;</p>
+<p>&lt;!-- A list of regular expressions that will be matched <u>agains</u> the URL path of the resource --&gt;</p>
+<p>&lt;notEmbeddedResources&gt;</p>
+<p> &lt;!--</p>
+<p> &lt;urlPathRegExp&gt;/not-<u>embeded</u>/.*&lt;/urlPathRegExp&gt;</p>
+<p> --&gt;</p>
+<p>&lt;/notEmbeddedResources&gt;</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Portal Server config</p>
+</td>
+<td>
+<p>The portal page files location [R01P app embed filter] will look after portal page files a the location set at:</p>
+<p> &lt;!-- the <u>filesystem</u> path where the container pages can be found --&gt;</p>
+<p> &lt;root&gt;/data/r01p/&lt;/root&gt;</p>
+<p> &lt;pages&gt;/<u>html</u>/pages/portal&lt;/pages&gt;</p>
+<p>&hellip; so if a portal page like web01-page1 is requested, the physical page HTML file will be looked after at /data/r01p/web01/html/pages/portal/page1</p>
+<p>The default portal/page/lang to be used if none can be guess from the request</p>
+<p> &lt;!-- the default portal/page/<u>lang</u> to be used if none can be guess from the request --&gt;</p>
+<p> &lt;defaultPortal&gt;web01&lt;/defaultPortal&gt;</p>
+<p> &lt;defaultPage&gt;<u>eduki</u>&lt;/defaultPage&gt;</p>
+<p> &lt;defaultLang&gt;<u>es</u>&lt;/defaultLang&gt;</p>
+<p>The portal cookie name where the portal / page / lang will be looked after if none can be guessed from the url</p>
+<p>&lt;portalCookieName&gt;r01pPortalCookie&lt;/portalCookieName&gt;</p>
+<p>[R01P app embed filter] caches the portal pages in memory; the cache can be configured as:</p>
+<p> &lt;cacheConfig&gt;</p>
+<p> &lt;initialCapacity&gt;10&lt;/initialCapacity&gt;</p>
+<p> &lt;maxSize&gt;100&lt;/maxSize&gt;</p>
+<p> &lt;checkInterval&gt;20s&lt;/checkInterval&gt;</p>
+<p> &lt;/cacheConfig&gt;</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Metrics</p>
+</td>
+<td>
+<p>[R01P app embed filter] has an embedded metrics system that can give a view of the system work</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The properties can be overridden at the web.xml in two levels:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><em>Level 1: set the path of a custom properties file:</em></p>
+</td>
+<td>
+<p>&lt;!-- [1]: properties file --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p> &lt;param-name&gt;r01p.appembed.configFor&lt;/param-name&gt;</p>
+<p> &lt;param-value&gt;xxx.myportalpageappembed&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p>The system will search the <strong><u>classpath</u></strong> looking after a file called</p>
+<p>xxx.myportalpageappembed.properties.xml</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><em>Level 2: set individual properties</em></p>
+</td>
+<td>
+<p>&lt;!-- A list of regular expressions (separated with ;) that will be matched against the URL path of the resource --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.notEmbeddedResources&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;/not-embedded/.*;&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p> </p>
+<p>&lt;!-- true if codahale's metrics are enabled --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.metricsEnabled&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;true&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p> </p>
+<p>&lt;!-- the <u>filesystem</u> path where the container pages can be found --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.appContainerPageFilesRootPath&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;d:/develop/temp_dev/r01p&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.appContainerPageFilesRelPath&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;/<u>html</u>/pages/portal&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p> </p>
+<p>&lt;!-- the default portal/page/<u>lang</u> to be used if none can be guess from the request --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.defaultPortal&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;web01&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.defaultPage&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;container2&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p>&lt;init-param&gt;&lt;param-name&gt;r01p.appembed.defaultLang&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;<u>es</u>&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+<p>&lt;!-- the container page file to be used it the requested one cannot be found (beware! this file is loaded from the <u>classpath</u>) --&gt;</p>
+<p>&lt;init-param&gt;</p>
+<p>&lt;param-name&gt;r01p.appembed.defaultContainerPageFileIfRequestedNotFound&lt;/param-name&gt;</p>
+<p>&lt;param-value&gt;r01p/portal/pages/r01DefaultAppContainerPortalPage.shtml&lt;/param-value&gt;</p>
+<p>&lt;/init-param&gt;</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>3.2 Running R01P as a stand-alone reverse proxy</p>
+<ul>
+<li> Config</li>
+</ul>
+<p>[R01P] configuration is fairly easy, it&rsquo;s based upon proxy config:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Proxy from the [web server] to the [portal application server]</p>
+<p>[<strong>Apache Web Server</strong>]</p>
+<p> [proxy] &szlig; this config</p>
+<p> |</p>
+<p> |</p>
+<p> [<strong>Portal App Server</strong>]</p>
+<p> [R01PProxy]</p>
+<p> |</p>
+<p> |</p>
+<p> [<strong>App Server</strong>]</p>
+</td>
+<td>
+<p>The config resides at <strong>/web/conf_apache/conf_common</strong> and just includes a <em>proxy</em> for the [portal application server] like:</p>
+<p>&lt;Location '<em>/r01pProxyToPortalAppServer</em><strong><em>X</em></strong>/.*'&gt;</p>
+<p> WLSRequest On</p>
+<p> <strong>WebLogicCluster portalAppServerHost1:port, portalAppServerHost2:port</strong></p>
+<p> PathTrim /<strong>r01pProxyWar</strong></p>
+<p>&lt;/Location&gt;</p>
+<p>Usually, once configured the [portal application server] there&rsquo;s NO need to create any additional proxy config.</p>
+<p>On the contrary, <strong>every time an application is deployed in production</strong> the [portal app server] (R01P) in charge of it&rsquo;s portal page integration must be configured in a [web server] (<em>apache</em>) map that relates the [application] with the corresponding [portal app server (R01P)]:</p>
+<p>The map is located at:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Development</strong></p>
+</td>
+<td>
+<p>/opt/apache2/conf_platea_nas/80/common/maps/map.apps.internet.inc</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Testing</strong></p>
+</td>
+<td>
+<p><strong>Non SSL:</strong> /opt/apache2/conf_platea_nas/80/common/maps/map.apps.internet.inc</p>
+<p><strong>SSL:</strong> /opt/apache2/conf_platea_nas/443/common/maps/map.apps.internet.inc</p>
+<p><strong>SSL-CLI:</strong> /opt/apache2/conf_platea_nas/444/common/maps/map.apps.internet.inc</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Producction</strong></p>
+</td>
+<td>
+<p><strong>Non SSL:</strong> /opt/apache2/conf_platea_nas/80/common/maps/map.apps.internet.inc</p>
+<p><strong>SSL:</strong> /opt/apache2/conf_platea_nas/443/common/maps/map.apps.internet.inc</p>
+<p><strong>SSL-CLI:</strong> /opt/apache2/conf_platea_nas/444/common/maps/map.apps.internet.inc</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Each map entry will correlate:</p>
+<p>&middot; <strong>The application code or alias</strong></p>
+<p>&middot; The proxy identifier to reach the [portal app server].</p>
+<p>A map example:</p>
+<p><em>aplictest </em><em>r01pProxyToPortalAppServer<strong>A</strong></em></p>
+<p><em>aaa </em><em>r01pProxyToPortalAppServer<strong>B</strong></em></p>
+<p><em>bbb </em><em>r01pProxyToPortalAppServer<strong>A</strong></em></p>
+<p><em>cgi-bin_aplic </em><em>r01pProxyToPortalAppServer<strong>B</strong></em></p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Proxy from the [portal application server] to the targer [application server]</p>
+<p>[<strong>Apache Web Server</strong>]</p>
+<p> [proxy]</p>
+<p> |</p>
+<p> |</p>
+<p> [<strong>Portal App Server</strong>]</p>
+<p> [R01PProxy] &szlig; this config</p>
+<p> |</p>
+<p> |</p>
+<p> [<strong>App Server</strong>]</p>
+</td>
+<td>
+<p>The config resides at <strong>/config</strong><strong>/r01p/proxydefs</strong> any file whose name matches the pattern <strong>r01p.xxx.proxy.conf</strong> (where xxx can be any string) will be parsed and the proxy definitions it contains will be configured.</p>
+<p>The proxy config format is almost 100% equal as the format used at the [web server] (<em>apache</em>) and since the [R01P] is just a wrapper of the [WeblogicProxyServlet] or [WeblogicClusterProxyServlet], the config params are the ones documented at <a href="https://docs.oracle.com/middleware/1212/webtier/PLGWL/apache.htm#PLGWL395">ORACLE&rsquo;s site</a></p>
+<p>A basic config of a proxy to a <strong>single</strong> target [app server]:</p>
+<p>&lt;Location 'r01pProxyWar/[a-zA-Z]{2}[0-9]{2}[a-z].*(?:War|WAR)'&gt;</p>
+<p> WLSRequest On</p>
+<p> <strong>WebLogicHost localhost</strong></p>
+<p><strong> WebLogicPort 8080</strong></p>
+<p> PathTrim /r01pProxyWar</p>
+<p>&lt;/Location&gt;</p>
+<p>A basic config of a proxy to a <strong>clustered</strong> target [app server]:</p>
+<p>&lt;Location 'r01pProxyWar/[a-zA-Z]{2}[0-9]{2}[a-z].*(?:War|WAR)'&gt;</p>
+<p> WLSRequest On</p>
+<p> <strong>WebLogicCluster localhost:7001|localhost:7002</strong></p>
+<p> PathTrim /r01pProxyWar</p>
+<p>&lt;/Location&gt;</p>
+<p>NOTE: For debugging pourposes a <strong>simple HttpProxy</strong> NOT weblogic proxy based can be configured like:</p>
+<p>&lt;Location 'r01pProxyWar/[a-zA-Z]{2}[0-9]{2}[a-z].*(?:War|WAR)'&gt;</p>
+<p> <strong>TargetAppServerHost localhost</strong></p>
+<p><strong> TargetAppServerPort 8080</strong> </p>
+<p> PathTrim /r01pProxyWar</p>
+<p>&lt;/Location&gt;</p>
+<p><strong>Its not recommended to use this proxy in a production environment.</strong></p>
+<p>See this table bellow to know more about some common [Weblogic] proxy parameters that can be used. These parameters can be used both in sigle server and cluster configurations.</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Cookie-related</p>
+</td>
+<td>
+<p>WLCookieName</p>
+<p>IMPORTANT: In order for the filter to work correctly, the <u>proxy</u> container WebApp MUST set the cookie name to a name DIFFERENT to any cookie name used by any of the <u>proxied</u><u>app</u> servers (see /WEB-INF/weblogic.xml file of r01pProxyWar)</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>TimeOuts connecting to the target app server</p>
+</td>
+<td>
+<p>ConnectRetrySecs // should be less than ConnectTimeoutSecs</p>
+<p>ConnectTimeoutSecs</p>
+<p>WLSocketTimeoutSecs</p>
+<p>WLRetryAfterDroppedConnection</p>
+<p>WLIOTimeoutSecs</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Keep Alive</p>
+</td>
+<td>
+<p>KeepAliveEnabled</p>
+<p>KeepAliveSecs</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Debug</p>
+</td>
+<td>
+<p>Debug // ALL, INFO...</p>
+<p>WLLogFile // where the debug file is stored</p>
+<p>DebugConfigInfo // enables the __WebLogicBridgeConfig parameter to<br/> // the request query string <br/> // (?__WebLogicBridgeConfig)</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>File names</p>
+</td>
+<td>
+<p>DefaultFileName</p>
+<p>ErrorPage</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>POST</p>
+</td>
+<td>
+<p>MaxPostSize</p>
+<p>FileCaching // write lage POSTs to disk</p>
+<p>WLTempDir // temp dir to write POSTs requests</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Paths</p>
+</td>
+<td>
+<p>PathPrepend</p>
+<p>PathTrim</p>
+<p>TrimExt</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>IP</p>
+</td>
+<td>
+<p>WLDNSRefreshInterval</p>
+<p>WLLocalIP</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>PassThrough</p>
+</td>
+<td>
+<p>WLProxyPassThrough</p>
+<p>WLExcludePathOrMimeType</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>SSL</p>
+</td>
+<td>
+<p>SecureProxy</p>
+<p>WLProxySSL</p>
+<p>WebLogicSSLVersion</p>
+<p>WLSSLWallet</p>
+<p>WLProxySSLPassThrough</p>
+<p>clientCertProxy</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Params <strong>specific for a single-server proxy</strong>:</p>
+<p>WebLogicHost</p>
+<p>WeblogicPort</p>
+<p>Params <strong>specific for a clustered-server proxy</strong>:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>WebLogicCluster</p>
+</td>
+<td>
+<p>Cluster instances must be separed by pipe symbol ( &lsquo;|&rsquo; )</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>DynamicServerList</p>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<p>Idempotent</p>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<p>MaxSkipTime</p>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<p>WLServerInitiatedFailover</p>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<p>RoutingHandlerClassName</p>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>DEPRECATED PARAMS</strong></p>
+<p>WLCookieName // use WLCookieName</p>
+<p>HungServerRecoverSecs // use WLIOTimeoutSecs</p>
+<p><strong>UNSUPPORTED PARAMS</strong></p>
+<p>WLSRequest // apache (alternative to SetHandler weblogic-handler)</p>
+<p>MatchExpression // cannot be set at &lt;location&gt; config sections</p>
+<p>QueryFromRequest // apache</p>
+<p>Debug // IIS</p>
+<p>WLFlushChunks // IIS</p>
+<p>WLSendHdrSeparately // IIS</p>
+<p>WLForwardUriUnparsed // apache</p>
+</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li> A note for configuring applications running in IIS</li>
+</ul>
+<p>IIS servers hosting applications susceptible for embedding must configure its site bindings property specifiying which virtual host will serve the application.</p>
+<p>Additionaly HTTP compression must be disabled.</p>
+<p><strong><u><br/></u></strong></p>
+<ul>
+<li> Testing the configuration</li>
+</ul>
+<p>Sometimes it&rsquo;s difficult to know if a configured [application] will be proxied and what&rsquo;ll be the target [application server] so ther&rsquo;s a section in the console for this task:</p>
+<p>The text box provided allows to check if a certain url pattern will meet the criteria for any proxy definition configured.</p>
+<p>The definition that will be used if found will be displayed.</p>
+<p>If there is not a definition that will meet the criteria for the provided url a error message will be shown.</p>
+<p>Additionaly all the current loaded proxy definitions will be listed along with the file path that contains each one.</p>
+<p>3.3 Metrics</p>
+<p>The system has a metrics console that offers some basic metrics about the system usage:</p>
+<p>Avariable metrics are shown below:</p>
+<ul>
+<li>Total active requests and active request grouped by proxy configuration count</li>
+<li>Total HTTP 500 response served</li>
+<li>Count , mean, 1-minute rate,5-minute rate and 15-minute rate for the following HTTP codes: 400 (bad request), 201 (created), 204 (no content), 404 (not found), 200 (ok), 500 (server error). There is additional metrics for the remaining http codes grouped in &ldquo;other&rdquo; metric.</li>
+<li>Total and mean time elapsed for all requests and requests grouped by proxy configuration.</li>
+</ul>
+<p>4 Developer useful info</p>
+<ul>
+<li> General rules</li>
+</ul>
+<p>When <strong>developing the [container portal page]: </strong></p>
+<p>Here is an example of a &ldquo;minimal&rdquo; [container portal page]:</p>
+<p>When developing the [container page HTML], some &ldquo;tricks&rdquo; can be used since [container portal pages] are just apache&rsquo;s SSI pages and so any <a href="http://httpd.apache.org/docs/current/mod/mod_include.html"><strong>mod_include</strong></a> feature can be used, specially:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Use [web server] (<em>apache</em>) environment variables</p>
+</td>
+<td>
+<p>Apache [web server] sets certain environment variables that can be used in any SSI-interpreted partial (<em>shtml files</em>).</p>
+<p>For example, in order to include an stylesheet depending on the <strong>language</strong>:</p>
+<p>&lt;!--#if expr='"$LANG" = "es"'--&gt;</p>
+<p> &lt;script src=<em>"/appcont/xxx/jquery/jquery.ui.datepicker-es.js"</em>&gt;&lt;/script&gt;</p>
+<p>&lt;!--#elif expr='"$LANG" = "eu"'--&gt;</p>
+<p> &lt;script src=<em>"/appcont/xxx/jquery/jquery.ui.datepicker-<strong>eu</strong>.js"</em>&gt;&lt;/script&gt;</p>
+<p>&lt;!--#endif --&gt;</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Include any partial file</p>
+</td>
+<td>
+<p>In addition to [visual areas] (<em>which are a special kind of SSI partial</em>), any html/shtml file can be included statically in the [container portal page]:</p>
+<p><strong>&lt;!--# include virtual=&rdquo;path_to_partial&rdquo; --&gt;</strong></p>
+<p>Bear in mind that this included partial can also be interpreted by the <em>mod_include</em> module (<em>if its extension is .shtml</em>) and so can also use [web server] (<em>apache</em>) environment variables or include another files.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>When <strong>designing</strong> the [application] the URL of the targeted application must meet some naming patterns (<em>as set by the EJIE&rsquo;s hosting rules</em>):</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p>Java application web module</p>
+</td>
+<td>
+<p>Web module URL names must start with application code, and somewhere in the path must appear the following tokens: WAR, War, Servlet or servlet.</p>
+<p>Examples of EJIE&rsquo;s hosting rules-compliant web module names are:</p>
+<p>/{appCode}xxxWar</p>
+<p>/{appCode}xxx/yyyServlet</p>
+<p>Examples of EJIE&rsquo;s hosting rules-NON compliant web module names are:</p>
+<p>/{appCode}xxx</p>
+<p>/{appCode}xxx/yyy/</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Non java applications<br/> (.php, .pl, .apl, .asp, .aspx, .axd, .esri)</p>
+</td>
+<td>
+<p>- They must start by a letter followed by one or more digits.</p>
+<p>- Or must be at least second level in the url.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Some particular scenarios are taken account of for compatibility</p>
+</td>
+<td>
+<p>- The URL starts with /rtta</p>
+<p>- The URL starts with /psc/</p>
+<p>- The URL contains cgi-bin_</p>
+<p>(&hellip; and any other special case configured into the [web server] (apache) rules)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>When <strong>developing</strong> the [application]:</p>
+<ul>
+<li>Navigation links between pages of the application <strong>can be either relative or absolute but</strong><strong>NEVER should include domain names</strong>.</li>
+<li>Static content should be placed in a <strong>folder under to the common [web server] alias</strong> &lsquo;<strong>appcont&rsquo;</strong> so <strong>every portal would be able to access it</strong></li>
+</ul>
+<p>If the static content is NOT in a folder under the &lsquo;<strong><em>appcont&rsquo;</em></strong> alias, the [application] cannot be integrated / embedded in any [page] for every [portal]</p>
+<p>As an example, referencing a resource in a certain content folder would be done as shown:</p>
+<p>href="/appcont/[app_content_folder]/[resource_relative_path]"</p>
+<p><strong><u><br/></u></strong></p>
+<ul>
+<li> [R01P] Filter</li>
+</ul>
+<p>As said before, the new [R01P] does NOT set any limitation to the developer so <strong>he/she should develop the application HTML as if [R01P] is NOT present</strong>.</p>
+<p>NOTE: Legacy [R01P] proxy leaved the developer limited to return a <strong>restricted HTML </strong>that only includes the HTML portion to be included in the &lt;body&gt; section wrapped in a &lt;div&gt; tag. <strong>This is no longer needed, in fact, the new [R01P] encourages the developer to return a full well-formed HTML page with all it&rsquo;s </strong><strong>&lt;html&gt;, &lt;head&gt; </strong><strong>and </strong><strong>&lt;body&gt;</strong><strong> sections</strong></p>
+<p>Once integrated / embeded in a portal page, the [application] can take advantage of some data provided by [R01P] proxy:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Request parameters</strong></p>
+</td>
+<td>
+<p>R01Portal</p>
+</td>
+<td>
+<p>Code of the portal within the application is displayed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>R01Page</p>
+</td>
+<td>
+<p>Code of the portal page requested.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>R01PLang</p>
+</td>
+<td>
+<p>Language code of the language versi&oacute;n of the portal requested.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Cookies</strong></p>
+</td>
+<td>
+<p>r01PortalInfo</p>
+</td>
+<td>
+<p><strong>Value</strong>: portalCode-pageCode/language</p>
+<p><strong>Expiration scope</strong>: session</p>
+<p><strong>Domain</strong>: euskadi.eus</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This data can be used by targeted aplications to know in which page from which portal are being displayed.</p>
+<ul>
+<li> Setting a non en-bedding behavior</li>
+</ul>
+<p>In some cases the developer may require some HTTP request <strong>not to be embedded</strong>.</p>
+<p>The [R01P app embed filter] <strong>will NOT embed</strong> the target app resonse in these situations</p>
+<ul>
+<li>Any request that not allows xhtml or html content</li>
+</ul>
+<p><em>For example if the Accept header is JSON, XML, binary, etc</em>, <em>the response will NOT be embedded into a portal page</em></p>
+<ul>
+<li>Any request whose URL is intended for a web service and contains &ldquo;restService&rdquo;, &ldquo;restEndPoint&rdquo;, &ldquo;serviceEndPoint&rdquo; or &ldquo;webService&rdquo; in the URL</li>
+</ul>
+<p>NOTE that if using the [R01P app embedded filter], additional regular expressions can be set (<em>se config section</em>)</p>
+<p>&lt;notEmbeddedResources&gt;</p>
+<p> &lt;urlPathRegExp&gt;/not-<u>embeded</u>/.*&lt;/urlPathRegExp&gt;</p>
+<p> &lt;urlPathRegExp&gt;/also/not-<u>embeded</u>/.*&lt;/urlPathRegExp&gt;</p>
+<p>&lt;/notEmbeddedResources&gt;</p>
+<ul>
+<li>Any request with the parameter &ldquo;R01PNoPortal=true&rdquo; present. <em>This exception is maintained for compatibility reasons and its use is discouraged.</em></li>
+</ul>
+<p></p>
+<ul>
+<li> Legacy [R01P]</li>
+</ul>
+<p>As said before, using the legacy [R01P] proxy, the [application] HTML must obbey certain restrictions:</p>
+<ol>
+<li><strong>The application to embed</strong><strong>can&rsquo;t contain </strong><strong>&lt;html&gt;, &lt;head&gt;</strong><strong> or </strong><strong>&lt;body&gt; </strong><strong>html tags: the html code must be defined inside a </strong><strong>&lt;div&gt; </strong><strong>tag</strong>.</li>
+<li>The metas / scripts / styles or whatever content to be included in the &lt;head&gt; section of the portal page integration HTML result <strong>must be defined at a file</strong> located at:</li>
+</ol>
+<p>&hellip; this is certainly a very bad restriction since every [application] page includes the same content in the &lt;head&gt; section</p>
+<p>Try to solve the new Formula Cube! It works exactly like a Rubik's Cube but it is only $2, from China. Learn to solve it with the tutorial on rubiksplace.com or use the <a href="https://www.grubiks.com/solvers/rubiks-cube-3x3x3/">solver to calculate</a> the solution in a few steps.</p>
