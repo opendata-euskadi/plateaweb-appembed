@@ -5,8 +5,6 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.nio.charset.Charset;
 
-import org.apache.commons.lang3.StringUtils;
-
 import io.reactivex.Flowable;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,12 +17,13 @@ import r01f.html.elements.HtmlEl;
 import r01f.html.parser.HtmlParserToken;
 import r01f.html.parser.HtmlTokenizerFlowable;
 import r01f.io.CharacterStreamSource;
+import r01f.types.url.Url;
 import r01f.types.url.UrlPath;
 import r01f.util.types.Strings;
 import r01f.util.types.locale.Languages;
-import r01p.portal.common.R01PPortalPageCopy;
 import r01p.portal.common.R01PPortalOIDs.R01PPortalID;
 import r01p.portal.common.R01PPortalOIDs.R01PPortalPageID;
+import r01p.portal.common.R01PPortalPageCopy;
 
 /**
  * Models an app container page where an app html will be included
@@ -242,8 +241,10 @@ implements Debuggable {
 				 * Parse URL removing simple and double quotes because a XSS security problem may occur.
 				 * May not be necessary to remove the double quotes. 
 				 */
-				String url = R01PPortalPageAppEmbedContext.removeProxyWarFromUrlPath(ctx.getRequestedUrlPath().asAbsoluteString());
-				outJSData.append("\trequestedUri : '").append(StringUtils.replacePattern(url, "['\"]", "")).append("',\n");
+				String urlStr = R01PPortalPageAppEmbedContext.removeProxyWarFromUrlPath(ctx.getRequestedUrlPath().asAbsoluteString());
+				Url unsafeUrl = Url.from(urlStr);
+				Url safeUrl = unsafeUrl.sanitizeUsing(R01PHTMLSanitizer.SANITIZER_FILTER);
+				outJSData.append("\trequestedUri : '").append(safeUrl.asString()).append("',\n");
 			} else {
 				outJSData.append("\trequestedUri : null,\n");
 			}
@@ -254,8 +255,9 @@ implements Debuggable {
 			}
 			if (ctx.getPortalId() != null && ctx.getPageId() != null) {
 				outJSData.append("\tportalInfo : {\n");
-				outJSData.append("\t\tportalId : '").append(ctx.getPortalId()).append("',\n");
-				outJSData.append("\t\tpageId : '").append(ctx.getPageId()).append("'\n");
+				// BEWARE! sanitize everything that's in the url
+				outJSData.append("\t\tportalId : '").append(R01PHTMLSanitizer.sanitizeHtml(ctx.getPortalId())).append("',\n");		
+				outJSData.append("\t\tpageId : '").append(R01PHTMLSanitizer.sanitizeHtml(ctx.getPageId())).append("'\n");
 				outJSData.append("\t},\n");
 			} else {
 				outJSData.append("\tportalInfo : {},\n");
