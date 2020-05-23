@@ -46,12 +46,14 @@ pom.xml.tag
 .metadata
 .loadpath
 .recommenders
+workingCopy*
 # Java annotation processor (APT)
 .factorypath
 .apt_generated/
 .apt_generated_test/
 # Locally stored [Eclipse launch configurations]
 *.launch
+
 
 # IntelliJ IDEA
 # ===============================
